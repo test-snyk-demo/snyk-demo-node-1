@@ -18,5 +18,7 @@ jobs:
     with:
       node-version: "18"
       docker-build: true
+      # Block PRs on high/critical findings; pushes to main stay report-only so the image still builds.
+      snyk-fail-on-issues: ${{ github.event_name == 'pull_request' }}
     secrets:
       snyk-token: ${{ secrets.SNYK_TOKEN }}
