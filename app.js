@@ -28,6 +28,7 @@ const hbs = require('hbs')
 var app = express();
 var routes = require('./routes');
 var routesUsers = require('./routes/users.js')
+var reports = require('./routes/reports.js');
 
 // all environments
 app.set('port', process.env.PORT || 3001);
@@ -51,6 +52,10 @@ app.use(fileUpload());
 // Routes
 app.use(routes.current_user);
 app.get('/', routes.index);
+app.get('/reports/export', reports.export);
+app.get('/reports/view', reports.view);
+app.get('/reports/done', reports.done);
+app.get('/reports/admin', reports.admin);
 app.get('/login', routes.login);
 app.post('/login', routes.loginHandler);
 app.get('/admin', routes.isLoggedIn, routes.admin);
