@@ -1,5 +1,6 @@
-# Runs test-snyk-demo/reusable-workflows/.github/workflows/js-ci.yaml@v6: build, Snyk Open Source + Code, Docker build + Snyk Container, push to GHCR from main.
-# Needs secret SNYK_TOKEN (without it the Snyk scans are skipped with a warning).
+# CI on test-snyk-demo/reusable-workflows js-ci.yaml@v7: build, Snyk Open Source + Code, then on main:
+# Docker build (hardened image) -> Snyk Container gate -> push to GHCR. A pushed image triggers the
+# Secure deploy workflow through a repository_dispatch event (image-pushed).
 name: CI
 on:
   push:
@@ -14,10 +15,30 @@ permissions:
   packages: write
 jobs:
   ci:
-    uses: test-snyk-demo/reusable-workflows/.github/workflows/js-ci.yaml@v6
+    uses: test-snyk-demo/reusable-workflows/.github/workflows/js-ci.yaml@v7
     with:
       node-version: "18"
       docker-build: true
-      # Block PRs on high/critical findings; pushes to main stay report-only so the image still builds.
+      docker-file: Dockerfile.secure
+      docker-image-name: goof-secure
+      container-fail-on-issues: true
     secrets:
       snyk-token: ${{ secrets.SNYK_TOKEN }}
+
+  trigger-deploy:
+    name: Trigger secure deploy
+    needs: ci
+    if: ${{ success() && needs.ci.outputs.image-digest != '' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Send repository_dispatch (image-pushed)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ${{ needs.ci.outputs.image-ref }}
+          DIGEST: ${{ needs.ci.outputs.image-digest }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/dispatches" -f event_type=image-pushed \
+            -f "client_payload[image]=$IMAGE" -f "client_payload[digest]=$DIGEST" -f "client_payload[sha]=$GITHUB_SHA"
+          echo "Triggered Secure deploy for \`$IMAGE\` (\`$DIGEST\`)" >> "$GITHUB_STEP_SUMMARY"
