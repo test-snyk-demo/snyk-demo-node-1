@@ -5,7 +5,7 @@ name: Secure deploy (kind)
 
 on:
   push:
-    branches: [secure-deploy, main]
+    branches: [main]
     paths: [Dockerfile.secure, k8s/**, deploy/**, .github/workflows/deploy-kind.yml, package.json, package-lock.json, "*.js", routes/**, views/**]
   workflow_dispatch:
 
@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    uses: test-snyk-demo/reusable-workflows/.github/workflows/docker-build.yaml@v5
+    uses: test-snyk-demo/reusable-workflows/.github/workflows/docker-build.yaml@v6
     permissions:
       contents: read
       packages: write
@@ -30,7 +30,7 @@ jobs:
 
   container-scan:
     needs: build
-    uses: test-snyk-demo/reusable-workflows/.github/workflows/docker-snyk-scan.yaml@v5
+    uses: test-snyk-demo/reusable-workflows/.github/workflows/docker-snyk-scan.yaml@v6
     permissions:
       contents: read
       actions: read
