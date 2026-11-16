@@ -1,0 +1,22 @@
+# Snyk Autofix on test-snyk-demo/reusable-workflows snyk-autofix.yaml: on every PR, applies Snyk's
+# recommended upgrades (Open Source + container base image) and opens a fix PR against the PR's branch.
+name: Snyk Autofix
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: snyk-autofix-${{ github.head_ref }}
+  cancel-in-progress: true
+jobs:
+  autofix:
+    if: ${{ !startsWith(github.head_ref, 'snyk-autofix/') }}
+    uses: test-snyk-demo/reusable-workflows/.github/workflows/snyk-autofix.yaml@v8
+    with:
+      node-version: "18"
+      dockerfile: Dockerfile.secure
+    secrets:
+      snyk-token: ${{ secrets.SNYK_TOKEN }}
+      pr-token: ${{ secrets.SNYK_AUTOFIX_TOKEN }}
