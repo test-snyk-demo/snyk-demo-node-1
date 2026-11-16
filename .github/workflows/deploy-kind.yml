@@ -1,5 +1,6 @@
-# Build the hardened image, scan it with the shared Snyk Container workflow, deploy it to a
-# throwaway kind cluster on the runner, and verify the security controls.
+# Build the hardened image, then scan it with Snyk Container. High or critical issues stop the
+# pipeline; a clean scan deploys to dev (a throwaway kind cluster on the runner) and verifies the
+# security controls.
 name: Secure deploy (kind)
 
 on:
@@ -17,7 +18,7 @@ concurrency:
 
 jobs:
   build:
-    uses: test-snyk-demo/reusable-workflows/.github/workflows/docker-build.yaml@v4
+    uses: test-snyk-demo/reusable-workflows/.github/workflows/docker-build.yaml@v5
     permissions:
       contents: read
       packages: write
@@ -29,7 +30,7 @@ jobs:
 
   container-scan:
     needs: build
-    uses: test-snyk-demo/reusable-workflows/.github/workflows/docker-snyk-scan.yaml@v4
+    uses: test-snyk-demo/reusable-workflows/.github/workflows/docker-snyk-scan.yaml@v5
     permissions:
       contents: read
       actions: read
@@ -39,12 +40,17 @@ jobs:
       image-artifact: ${{ needs.build.outputs.image-artifact }}
       dockerfile: Dockerfile.secure
       snyk-org: ${{ github.repository_owner }}
+      project-name: ${{ github.repository }}-secure
+      severity-threshold: high
+      fail-on-issues: true
+      monitor: true
     secrets:
       snyk-token: ${{ secrets.SNYK_TOKEN }}
 
   deploy:
-    name: Deploy and verify
+    name: Deploy to dev and verify
     needs: [build, container-scan]
+    environment: dev
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
