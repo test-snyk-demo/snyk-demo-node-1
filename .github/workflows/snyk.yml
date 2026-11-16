@@ -1,0 +1,55 @@
+# Snyk scan: calls test-snyk-demo/reusable-workflows/.github/workflows/js-snyk.yaml@v4 (Open Source + Code).
+# On PRs, Snyk Autofix (test-snyk-demo/reusable-workflows/.github/workflows/snyk-autofix.yaml@v8) then opens a fix PR
+# with Snyk's upgrades for the dependency issues the PR introduces; weekly, one backlog fix PR for main.
+# Needs secret SNYK_TOKEN, and AUTOFIX_APP_TOKEN (contents, pull requests and issues: write).
+name: Snyk
+on:
+  push:
+    branches: [main, "hotfix/**"]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"   # weekly backlog fixes (Mondays 06:00 UTC)
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+  pull-requests: write
+jobs:
+  snyk:
+    if: github.event_name != 'schedule'
+    uses: test-snyk-demo/reusable-workflows/.github/workflows/js-snyk.yaml@v4
+    with:
+      snyk-org: test-snyk-demo
+      # Block PRs on high/critical findings; pushes stay report-only.
+      fail-on-issues: ${{ github.event_name == 'pull_request' }}
+      # Publish reports to Snyk from the default branch only; PRs scan, comment and gate without publishing.
+      monitor: ${{ github.ref_name == github.event.repository.default_branch }}
+    secrets:
+      snyk-token: ${{ secrets.SNYK_TOKEN }}
+
+  autofix:
+    needs: snyk
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && !startsWith(github.head_ref, 'snyk-autofix/') }}
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: test-snyk-demo/reusable-workflows/.github/workflows/snyk-autofix.yaml@v8
+    with:
+      snyk-org: test-snyk-demo
+    secrets:
+      snyk-token: ${{ secrets.SNYK_TOKEN }}
+      app-token: ${{ secrets.AUTOFIX_APP_TOKEN }}
+
+  autofix-backlog:
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch)
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: test-snyk-demo/reusable-workflows/.github/workflows/snyk-autofix.yaml@v8
+    with:
+      mode: backlog
+      snyk-org: test-snyk-demo
+    secrets:
+      snyk-token: ${{ secrets.SNYK_TOKEN }}
+      app-token: ${{ secrets.AUTOFIX_APP_TOKEN }}
