@@ -1,77 +1,55 @@
-# Build the hardened image, then scan it with Snyk Container. High or critical issues stop the
-# pipeline; a clean scan deploys to dev (a throwaway kind cluster on the runner) and verifies the
-# security controls.
-name: Secure deploy (kind)
+# Deploys an image that CI built, scanned with Snyk Container and pushed to GHCR. Triggered by CI's
+# repository_dispatch event (image-pushed), or by hand with an image reference. Deploys to dev (a
+# throwaway kind cluster on the runner) and verifies the security controls.
+name: Secure deploy (dev)
 
 on:
-  push:
-    branches: [main]
-    paths: [Dockerfile.secure, k8s/**, deploy/**, .github/workflows/deploy-kind.yml, package.json, package-lock.json, "*.js", routes/**, views/**]
+  repository_dispatch:
+    types: [image-pushed]
   workflow_dispatch:
+    inputs:
+      image:
+        description: Image to deploy, e.g. ghcr.io/test-snyk-demo/goof-secure:<sha>
+        required: true
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
-  group: deploy-kind-${{ github.ref }}
-  cancel-in-progress: true
+  group: deploy-dev
+  cancel-in-progress: false
 
 jobs:
-  build:
-    uses: test-snyk-demo/reusable-workflows/.github/workflows/docker-build.yaml@v6
-    permissions:
-      contents: read
-      packages: write
-    with:
-      image-name: goof-secure
-      dockerfile: Dockerfile.secure
-      push: false
-      export-image: true
-
-  container-scan:
-    needs: build
-    uses: test-snyk-demo/reusable-workflows/.github/workflows/docker-snyk-scan.yaml@v6
-    permissions:
-      contents: read
-      actions: read
-      security-events: write
-      pull-requests: write
-    with:
-      image-artifact: ${{ needs.build.outputs.image-artifact }}
-      dockerfile: Dockerfile.secure
-      snyk-org: ${{ github.repository_owner }}
-      project-name: ${{ github.repository }}-secure
-      severity-threshold: high
-      fail-on-issues: true
-      monitor: true
-    secrets:
-      snyk-token: ${{ secrets.SNYK_TOKEN }}
-
   deploy:
     name: Deploy to dev and verify
-    needs: [build, container-scan]
     environment: dev
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
+      SOURCE_IMAGE: ${{ github.event.client_payload.image || inputs.image }}
+      DIGEST: ${{ github.event.client_payload.digest }}
       IMAGE: goof-secure:local
       CALICO_VERSION: v3.33.0
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-
-      - name: Download image
-        uses: actions/download-artifact@v8
         with:
-          name: ${{ needs.build.outputs.image-artifact }}
-          path: ${{ runner.temp }}/image
+          ref: ${{ github.event.client_payload.sha || github.sha }}
 
-      - name: Load image
-        env:
-          TAR: ${{ runner.temp }}/image/${{ needs.build.outputs.image-artifact }}.tar
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Pull the scanned image
         run: |
-          ref=$(docker load -i "$TAR" | sed -n 's/^Loaded image: //p' | head -1)
+          ref="$SOURCE_IMAGE"
+          [[ -n "$DIGEST" ]] && ref="${SOURCE_IMAGE%:*}@$DIGEST"
+          docker pull "$ref"
           docker tag "$ref" "$IMAGE"
+          echo "Deploying \`$ref\` to dev" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install Snyk CLI
         uses: jdx/mise-action@v5
