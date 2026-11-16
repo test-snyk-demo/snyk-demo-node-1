@@ -1,4 +1,4 @@
-# Runs test-snyk-demo/reusable-workflows/.github/workflows/js-ci.yaml@v4: build, Snyk Open Source + Code, Docker build + Snyk Container, push to GHCR from main.
+# Runs test-snyk-demo/reusable-workflows/.github/workflows/js-ci.yaml@v6: build, Snyk Open Source + Code, Docker build + Snyk Container, push to GHCR from main.
 # Needs secret SNYK_TOKEN (without it the Snyk scans are skipped with a warning).
 name: CI
 on:
@@ -14,7 +14,7 @@ permissions:
   packages: write
 jobs:
   ci:
-    uses: test-snyk-demo/reusable-workflows/.github/workflows/js-ci.yaml@v4
+    uses: test-snyk-demo/reusable-workflows/.github/workflows/js-ci.yaml@v6
     with:
       node-version: "18"
       docker-build: true
