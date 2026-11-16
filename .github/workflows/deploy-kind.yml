@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build:
-    uses: test-snyk-demo/reusable-workflows/.github/workflows/docker-build.yaml@v1
+    uses: test-snyk-demo/reusable-workflows/.github/workflows/docker-build.yaml@v4
     permissions:
       contents: read
       packages: write
@@ -29,7 +29,7 @@ jobs:
 
   container-scan:
     needs: build
-    uses: test-snyk-demo/reusable-workflows/.github/workflows/docker-snyk-scan.yaml@v1
+    uses: test-snyk-demo/reusable-workflows/.github/workflows/docker-snyk-scan.yaml@v4
     permissions:
       contents: read
       actions: read
@@ -77,12 +77,7 @@ jobs:
       - name: Snyk IaC scan (report-only)
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: |
-          if [[ -z "$SNYK_TOKEN" ]]; then
-            echo "::warning title=Snyk skipped::No SNYK_TOKEN secret; skipping the IaC scan."
-            exit 0
-          fi
-          snyk iac test k8s/ --org="${{ github.repository_owner }}" || true
+        run: snyk iac test k8s/ --org="${{ github.repository_owner }}" || true
 
       - name: Create kind cluster
         uses: helm/kind-action@v1.15.2
