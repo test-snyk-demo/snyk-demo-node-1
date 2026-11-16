@@ -20,7 +20,7 @@ jobs:
     with:
       node-version: "18"
       docker-build: true
-      docker-file: Dockerfile.secure
+      # docker-file: Dockerfile.secure   # demo: build the default Dockerfile so Snyk Container fails
       docker-image-name: goof-secure
       container-fail-on-issues: true
       container-exclude-app-vulns: true
