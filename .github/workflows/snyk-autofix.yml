@@ -1,7 +1,7 @@
 # Snyk Autofix on test-snyk-demo/reusable-workflows snyk-autofix.yaml: after CI runs on a PR, applies
 # Snyk's recommended upgrades (Open Source + container base image) and opens a fix PR against the PR's branch.
 name: Snyk Autofix
-run-name: Snyk Autofix for PR #${{ github.event.workflow_run.pull_requests[0].number }} (${{ github.event.workflow_run.head_branch }})
+run-name: "Snyk Autofix for PR #${{ github.event.workflow_run.pull_requests[0].number }} (${{ github.event.workflow_run.head_branch }})"
 on:
   workflow_run:
     workflows: [CI]
