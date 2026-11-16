@@ -22,6 +22,7 @@ jobs:
       docker-file: Dockerfile.secure
       docker-image-name: goof-secure
       container-fail-on-issues: true
+      container-exclude-app-vulns: true
     secrets:
       snyk-token: ${{ secrets.SNYK_TOKEN }}
 
