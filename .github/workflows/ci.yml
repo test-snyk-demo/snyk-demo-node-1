@@ -36,7 +36,6 @@ jobs:
     uses: test-snyk-demo/reusable-workflows/.github/workflows/snyk-autofix.yaml@v8
     with:
       node-version: "18"
-      dockerfile: Dockerfile.secure
     secrets:
       snyk-token: ${{ secrets.SNYK_TOKEN }}
       app-token: ${{ secrets.AUTOFIX_APP_TOKEN }}
