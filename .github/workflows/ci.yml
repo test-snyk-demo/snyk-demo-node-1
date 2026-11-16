@@ -28,7 +28,6 @@ jobs:
       snyk-token: ${{ secrets.SNYK_TOKEN }}
 
   autofix:
-    name: Snyk Autofix
     needs: ci
     if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'snyk-autofix/')
     permissions:
