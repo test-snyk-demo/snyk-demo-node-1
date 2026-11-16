@@ -1,6 +1,7 @@
 # CI on test-snyk-demo/reusable-workflows js-ci.yaml@v7: build, Snyk Open Source + Code, then on main:
 # Docker build (hardened image) -> Snyk Container gate -> push to GHCR. A pushed image triggers the
-# Secure deploy workflow through a repository_dispatch event (image-pushed).
+# Secure deploy workflow through a repository_dispatch event (image-pushed). On PRs, Snyk Autofix
+# then opens a fix PR with Snyk's upgrades for the dependency issues the PR introduces.
 name: CI
 on:
   push:
@@ -25,6 +26,21 @@ jobs:
       container-exclude-app-vulns: true
     secrets:
       snyk-token: ${{ secrets.SNYK_TOKEN }}
+
+  autofix:
+    name: Snyk Autofix
+    needs: ci
+    if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'snyk-autofix/')
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: test-snyk-demo/reusable-workflows/.github/workflows/snyk-autofix.yaml@v8
+    with:
+      node-version: "18"
+      dockerfile: Dockerfile.secure
+    secrets:
+      snyk-token: ${{ secrets.SNYK_TOKEN }}
+      app-token: ${{ secrets.AUTOFIX_APP_TOKEN }}
 
   trigger-deploy:
     name: Trigger secure deploy
